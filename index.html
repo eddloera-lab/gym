@@ -236,6 +236,66 @@
     padding:12px 14px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;
   }
   .streakstat .ic{font-size:16px;}
+
+  /* routine history */
+  .rh-section{margin-top:22px;}
+  .rh-title{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--dim2); margin-bottom:10px;}
+  .rh-item{background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden;}
+  .rh-head{padding:12px 14px; display:flex; justify-content:space-between; align-items:center;}
+  .rh-id{color:var(--accent); font-weight:800; font-size:12px; margin-right:6px;}
+  .rh-label{font-size:13.5px; font-weight:700;}
+  .rh-range{font-size:11px; color:var(--dim2); margin-top:2px;}
+  .rh-toggle{background:none; border:none; color:var(--dim); font-size:16px; cursor:pointer; padding:4px 8px;}
+  .rh-body{padding:0 14px 14px;}
+  .rh-day{margin-bottom:10px;}
+  .rh-dayname{font-size:12px; font-weight:700; color:var(--dim); margin-bottom:4px;}
+  .rh-ex{font-size:12.5px; color:var(--text); padding:2px 0; border-bottom:1px dashed var(--line);}
+
+  /* body weight */
+  .bw-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:14px;}
+  .bw-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;}
+  .bw-current{font-size:34px; font-weight:800;}
+  .bw-current .unit{font-size:16px; color:var(--dim); font-weight:600; margin-left:4px;}
+  .bw-range{font-size:12.5px; color:var(--dim); margin-top:2px;}
+  .bw-period{text-align:right;}
+  .bw-period .l{font-size:11px; color:var(--dim2); text-transform:uppercase;}
+  .bw-period select{
+    background:none; border:none; color:var(--text); font-weight:700; font-size:14px;
+    text-align:right; -webkit-appearance:none; appearance:none; padding:2px 0;
+  }
+  .bw-minmax{display:flex; gap:10px; margin-bottom:16px;}
+  .bw-mm{
+    flex:1; background:var(--bg-elev); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; display:flex; align-items:baseline; justify-content:space-between;
+  }
+  .bw-mm .v{font-size:19px; font-weight:800;}
+  .bw-mm .v .u{font-size:12px; color:var(--dim); font-weight:600; margin-left:2px;}
+  .bw-mm .lbl{font-size:12px; color:var(--dim); display:flex; align-items:center; gap:4px;}
+  .bw-addbtn{
+    width:100%; background:none; border:1.5px dashed var(--line); color:var(--accent);
+    border-radius:12px; padding:14px; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:16px;
+  }
+  .bw-form{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:16px;}
+  .bw-form-row{display:flex; gap:8px; margin-bottom:10px;}
+  .bw-form input{
+    flex:1; background:var(--bg-elev); border:1px solid var(--line); border-radius:8px;
+    color:var(--text); padding:10px; font-size:14px;
+  }
+  .bw-form input[type="date"]{color-scheme:dark;}
+  .bw-form button{
+    background:var(--accent); color:#08201b; border:none; border-radius:8px;
+    padding:10px 16px; font-weight:800; font-size:13px; cursor:pointer;
+  }
+  .bw-listtitle{font-size:17px; font-weight:800; margin-bottom:10px;}
+  .bw-row{display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--line);}
+  .bw-row .d{font-size:11.5px; color:var(--dim2); text-transform:uppercase; letter-spacing:0.03em;}
+  .bw-row .k{font-size:16px; font-weight:700; margin-top:2px;}
+  .bw-row .k .u{font-size:12px; color:var(--dim); font-weight:600;}
+  .bw-delta{font-size:13px; font-weight:700; display:flex; align-items:center; gap:3px;}
+  .bw-delta.up{color:#4fa3e0;}
+  .bw-delta.down{color:var(--pr);}
+  .bw-delta.flat{color:var(--dim2);}
+  .bw-del{background:none; border:none; color:var(--dim2); font-size:16px; cursor:pointer; padding:4px 6px; margin-left:8px;}
 </style>
 </head>
 <body>
@@ -263,6 +323,7 @@
 </div>
 
 <script>
+const ROUTINE_META = { id:'R1', label:'Julio 2026' };
 const DAYS = [
   { id:'d1', name:'Día 1', sub:'Torso — Empuje / Jalón',
     muscles:[{n:'Pecho',p:30},{n:'Espalda',p:30},{n:'Hombro',p:20},{n:'Bíceps',p:10},{n:'Tríceps',p:10}],
@@ -445,11 +506,13 @@ function renderTabs(){
     `<button class="tab ${state.view==='day'&&state.dayIdx===i?'active':''}" data-idx="${i}">${d.name}</button>`
   ).join('')
     + `<button class="tab progress ${state.view==='progress'?'active':''}" data-idx="progress">Progreso</button>`
-    + `<button class="tab progress ${state.view==='calendar'?'active':''}" data-idx="calendar">Calendario</button>`;
+    + `<button class="tab progress ${state.view==='calendar'?'active':''}" data-idx="calendar">Calendario</button>`
+    + `<button class="tab progress ${state.view==='weight'?'active':''}" data-idx="weight">Peso</button>`;
   el.querySelectorAll('.tab').forEach(btn=>{
     btn.onclick = () => {
       if(btn.dataset.idx === 'progress'){ state.view = 'progress'; }
       else if(btn.dataset.idx === 'calendar'){ state.view = 'calendar'; }
+      else if(btn.dataset.idx === 'weight'){ state.view = 'weight'; }
       else { state.view='day'; state.dayIdx = Number(btn.dataset.idx); }
       renderTabs(); renderMain();
     };
@@ -476,6 +539,12 @@ async function renderMain(){
     const old = document.querySelector('.finishbar');
     if(old) old.remove();
     renderCalendar(app);
+    return;
+  }
+  if(state.view === 'weight'){
+    const old = document.querySelector('.finishbar');
+    if(old) old.remove();
+    renderBodyWeight(app);
     return;
   }
 
@@ -556,6 +625,36 @@ function finishDay(day, complete){
   renderMain();
   window.scrollTo({top:0, behavior:'smooth'});
 }
+
+function syncRoutineVersion(){
+  let stored = null;
+  try{ stored = JSON.parse(localStorage.getItem('routineMeta') || 'null'); }catch(e){ stored = null; }
+
+  if(!stored){
+    const meta = { id: ROUTINE_META.id, label: ROUTINE_META.label, startDate: todayISO(), days: DAYS };
+    try{ localStorage.setItem('routineMeta', JSON.stringify(meta)); }catch(e){}
+    return;
+  }
+
+  if(stored.id !== ROUTINE_META.id){
+    let history = [];
+    try{ history = JSON.parse(localStorage.getItem('routineHistory') || '[]'); }catch(e){ history = []; }
+    history.push({
+      id: stored.id, label: stored.label,
+      startDate: stored.startDate, endDate: todayISO(),
+      days: stored.days
+    });
+    try{ localStorage.setItem('routineHistory', JSON.stringify(history)); }catch(e){}
+
+    const meta = { id: ROUTINE_META.id, label: ROUTINE_META.label, startDate: todayISO(), days: DAYS };
+    try{ localStorage.setItem('routineMeta', JSON.stringify(meta)); }catch(e){}
+  }
+}
+
+function getRoutineHistory(){
+  try{ return JSON.parse(localStorage.getItem('routineHistory') || '[]'); }catch(e){ return []; }
+}
+
 
 function getRestDays(){
   try{ return JSON.parse(localStorage.getItem('restDays') || '[]'); }catch(e){ return []; }
@@ -697,7 +796,16 @@ function renderCalendar(app){
       <span><span class="dot" style="background:var(--card); border:1px solid var(--pr)"></span>Parcial</span>
       <span><span class="dot" style="background:var(--card); border:1px solid #2f5f80"></span>Descanso</span>
     </div>
+    ${renderRoutineHistoryHTML()}
   `;
+  app.querySelectorAll('.rh-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const body = btn.closest('.rh-item').querySelector('.rh-body');
+      const open = body.style.display === 'block';
+      body.style.display = open ? 'none' : 'block';
+      btn.textContent = open ? '▾' : '▴';
+    });
+  });
   app.querySelectorAll('.wscell').forEach(cell=>{
     if(cell.dataset.future === 'true' || cell.dataset.trained === 'true') return;
     cell.addEventListener('click', ()=>{
@@ -712,6 +820,213 @@ function renderCalendar(app){
   document.getElementById('calNext').addEventListener('click', ()=>{
     calCursor = new Date(year, month+1, 1);
     renderCalendar(app);
+  });
+}
+
+function renderRoutineHistoryHTML(){
+  const history = getRoutineHistory();
+  const rows = [
+    ...history.map(h => ({...h, current:false})),
+    { id: ROUTINE_META.id, label: ROUTINE_META.label, startDate: (JSON.parse(localStorage.getItem('routineMeta')||'{}').startDate)||todayISO(), endDate:null, days: DAYS, current:true }
+  ].reverse();
+
+  const items = rows.map(r => {
+    const range = r.current ? `${fmtDate(r.startDate)} — hoy` : `${fmtDate(r.startDate)} — ${fmtDate(r.endDate)}`;
+    const daysHtml = r.days.map(d => `
+      <div class="rh-day">
+        <div class="rh-dayname">${d.name} · ${d.sub}</div>
+        ${d.ex.map(e=>`<div class="rh-ex">${e.name} — ${e.sets}×${e.target}${e.unit==='seg'?' seg':''}</div>`).join('')}
+      </div>`).join('');
+    return `
+      <div class="rh-item">
+        <div class="rh-head">
+          <div>
+            <span class="rh-id mono">${r.id}</span>
+            <span class="rh-label">${r.label}${r.current?' (actual)':''}</span>
+            <div class="rh-range">${range}</div>
+          </div>
+          <button class="rh-toggle">▾</button>
+        </div>
+        <div class="rh-body" style="display:none;">${daysHtml}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="rh-section">
+      <div class="rh-title">Rutinas anteriores</div>
+      ${items}
+    </div>`;
+}
+
+/* ===== Peso corporal ===== */
+let bwPeriod = '3m';
+let bwFormOpen = false;
+
+function getWeightLog(){
+  try{ return JSON.parse(localStorage.getItem('bodyWeightLog') || '[]'); }catch(e){ return []; }
+}
+function setWeightLog(arr){
+  try{ localStorage.setItem('bodyWeightLog', JSON.stringify(arr)); }catch(e){}
+}
+function addWeightEntry(dateStr, kg){
+  const log = getWeightLog();
+  const idx = log.findIndex(e => e.date === dateStr);
+  if(idx >= 0) log[idx].kg = kg; else log.push({date:dateStr, kg});
+  log.sort((a,b)=> a.date < b.date ? -1 : 1);
+  setWeightLog(log);
+}
+function deleteWeightEntry(dateStr){
+  const log = getWeightLog().filter(e => e.date !== dateStr);
+  setWeightLog(log);
+}
+function periodStartDate(period){
+  const d = new Date();
+  if(period==='1m') d.setMonth(d.getMonth()-1);
+  else if(period==='3m') d.setMonth(d.getMonth()-3);
+  else if(period==='6m') d.setMonth(d.getMonth()-6);
+  else if(period==='1y') d.setFullYear(d.getFullYear()-1);
+  else return null; // todo
+  return d.toISOString().slice(0,10);
+}
+function fmtDateLong(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('es-MX', {day:'numeric', month:'long', year:'numeric'});
+}
+function fmtDateShort2(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('es-MX', {day:'numeric', month:'short'}).replace('.','');
+}
+
+function renderBodyWeight(app){
+  const fullLog = getWeightLog();
+  const startDate = periodStartDate(bwPeriod);
+  const log = startDate ? fullLog.filter(e => e.date >= startDate) : fullLog.slice();
+  const sorted = [...log].sort((a,b)=> a.date < b.date ? -1 : 1);
+
+  const current = fullLog.length ? fullLog[fullLog.length-1] : null;
+  const rangeLabel = sorted.length
+    ? `${fmtDateShort2(sorted[0].date)} — ${fmtDateShort2(sorted[sorted.length-1].date)}`
+    : 'Sin registros aún';
+
+  let chartHtml = `<div class="emptystate">Registra tu peso para ver la gráfica.</div>`;
+  let minKg = null, maxKg = null;
+  if(sorted.length >= 1){
+    const kgs = sorted.map(e=>e.kg);
+    minKg = Math.min(...kgs); maxKg = Math.max(...kgs);
+    const W=300,H=150,PAD=16;
+    const range = Math.max(maxKg - minKg, 1);
+    const stepX = sorted.length>1 ? (W-2*PAD)/(sorted.length-1) : 0;
+    const coords = sorted.map((e,i)=>{
+      const x = PAD + i*stepX;
+      const y = H-PAD-((e.kg-minKg)/range)*(H-2*PAD);
+      return {x,y,...e};
+    });
+    const path = coords.map((c,i)=>(i===0?'M':'L')+c.x.toFixed(1)+','+c.y.toFixed(1)).join(' ');
+    const areaPath = path + ` L${coords[coords.length-1].x.toFixed(1)},${H-PAD} L${coords[0].x.toFixed(1)},${H-PAD} Z`;
+    const dots = coords.map(c=>`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="3.5" fill="#4fa3e0"/>`).join('');
+    chartHtml = `
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="170">
+        <defs>
+          <linearGradient id="bwGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4fa3e0" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#4fa3e0" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaPath}" fill="url(#bwGrad)"/>
+        <path d="${path}" fill="none" stroke="#4fa3e0" stroke-width="2.5"/>
+        ${dots}
+      </svg>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--dim2); margin-top:2px;">
+        <span>${fmtDateShort2(sorted[0].date)}</span>
+        <span>${fmtDateShort2(sorted[sorted.length-1].date)}</span>
+      </div>`;
+  }
+
+  const recordsDesc = [...fullLog].sort((a,b)=> a.date < b.date ? 1 : -1);
+  const rowsHtml = recordsDesc.map((entry, i) => {
+    const priorChron = fullLog.filter(e => e.date < entry.date).sort((a,b)=> a.date < b.date ? 1 : -1)[0];
+    let deltaHtml = `<span class="bw-delta flat">—</span>`;
+    if(priorChron){
+      const diff = Math.round((entry.kg - priorChron.kg)*10)/10;
+      if(diff > 0) deltaHtml = `<span class="bw-delta up">+${diff} ↑</span>`;
+      else if(diff < 0) deltaHtml = `<span class="bw-delta down">${diff} ↓</span>`;
+      else deltaHtml = `<span class="bw-delta flat">—</span>`;
+    }
+    return `
+      <div class="bw-row">
+        <div>
+          <div class="d">${fmtDateLong(entry.date)}</div>
+          <div class="k">${entry.kg}<span class="u"> kg</span></div>
+        </div>
+        <div style="display:flex; align-items:center;">
+          ${deltaHtml}
+          <button class="bw-del" data-date="${entry.date}">✕</button>
+        </div>
+      </div>`;
+  }).join('') || `<div class="emptystate">Aún no tienes registros de peso.</div>`;
+
+  app.innerHTML = `
+    <div class="bw-card">
+      <div class="bw-head">
+        <div>
+          <div class="bw-current">${current ? current.kg : '--'}<span class="unit">kg</span></div>
+          <div class="bw-range">${rangeLabel}</div>
+        </div>
+        <div class="bw-period">
+          <div class="l">Período</div>
+          <select id="bwPeriodSel">
+            <option value="1m" ${bwPeriod==='1m'?'selected':''}>1 Mes</option>
+            <option value="3m" ${bwPeriod==='3m'?'selected':''}>3 Meses</option>
+            <option value="6m" ${bwPeriod==='6m'?'selected':''}>6 Meses</option>
+            <option value="1y" ${bwPeriod==='1y'?'selected':''}>1 Año</option>
+            <option value="all" ${bwPeriod==='all'?'selected':''}>Todo</option>
+          </select>
+        </div>
+      </div>
+      ${chartHtml}
+    </div>
+    <div class="bw-minmax">
+      <div class="bw-mm"><span class="v">${minKg ?? '--'}<span class="u">kg</span></span><span class="lbl">↓ Mínimo</span></div>
+      <div class="bw-mm"><span class="v">${maxKg ?? '--'}<span class="u">kg</span></span><span class="lbl">↑ Máximo</span></div>
+    </div>
+    <div class="bw-listtitle">Registros</div>
+    ${bwFormOpen ? `
+      <div class="bw-form">
+        <div class="bw-form-row">
+          <input type="date" id="bwDate" value="${todayISO()}">
+          <input type="number" id="bwKg" placeholder="Kg" step="0.1" inputmode="decimal">
+        </div>
+        <button id="bwSave" style="width:100%;">Guardar</button>
+      </div>
+    ` : `<button class="bw-addbtn" id="bwOpenForm">+ Registrar Peso</button>`}
+    ${rowsHtml}
+  `;
+
+  const sel = document.getElementById('bwPeriodSel');
+  sel.addEventListener('change', ()=>{ bwPeriod = sel.value; renderBodyWeight(app); });
+
+  if(bwFormOpen){
+    document.getElementById('bwSave').addEventListener('click', ()=>{
+      const dateVal = document.getElementById('bwDate').value;
+      const kgVal = parseFloat(document.getElementById('bwKg').value);
+      if(!dateVal || isNaN(kgVal)){ showToast('Falta fecha o peso'); return; }
+      addWeightEntry(dateVal, kgVal);
+      bwFormOpen = false;
+      showToast('Peso guardado');
+      renderBodyWeight(app);
+    });
+  } else {
+    document.getElementById('bwOpenForm').addEventListener('click', ()=>{
+      bwFormOpen = true;
+      renderBodyWeight(app);
+    });
+  }
+
+  app.querySelectorAll('.bw-del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      deleteWeightEntry(btn.dataset.date);
+      renderBodyWeight(app);
+    });
   });
 }
 
@@ -823,6 +1138,20 @@ function unlockAudio(){
 document.addEventListener('click', unlockAudio, {once:true});
 document.addEventListener('touchstart', unlockAudio, {once:true});
 
+let wakeLock = null;
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  }catch(e){ /* not supported or denied, silently ignore */ }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') requestWakeLock();
+});
+document.addEventListener('click', requestWakeLock, {once:true});
+document.addEventListener('touchstart', requestWakeLock, {once:true});
+
 function onTimerDone(exId){
   if(navigator.vibrate) navigator.vibrate([250,100,250,100,250]);
   beep(); setTimeout(beep, 350); setTimeout(beep, 700);
@@ -922,6 +1251,7 @@ async function renderProgressBody(exId){
 }
 
 (async function init(){
+  syncRoutineVersion();
   renderTabs();
   await renderMain();
   renderWeekBadge(true);

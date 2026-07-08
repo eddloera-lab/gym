@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>RUTINA.LOG</title>
+<title>Lalobito Gym</title>
 <style>
   :root{
     --bg:#111311;
@@ -119,6 +119,12 @@
   .exfoot{padding:0 14px 12px; display:flex; justify-content:space-between; align-items:center;}
   .addset{background:none; border:none; color:var(--accent); font-size:12.5px; font-weight:700; cursor:pointer; padding:4px 0;}
   .prevlast{font-size:11px; color:var(--dim2);}
+  .wikilink{
+    display:inline-flex; align-items:center; gap:4px; color:var(--dim); font-size:11.5px;
+    text-decoration:none; border:1px solid var(--line); border-radius:8px; padding:5px 9px;
+    margin-top:8px;
+  }
+  .wikilink:active{background:var(--bg-elev);}
 
   /* progress view */
   .exselect{
@@ -196,17 +202,46 @@
   .calcell.today{border-color:var(--text);}
   .calcell.done{background:var(--accent-dark); border-color:var(--accent); color:var(--text);}
   .calcell.done.partial{background:var(--card); border-color:var(--pr); color:var(--pr);}
+  .calcell.rest{background:var(--card); border-color:#2f5f80; color:#4fa3e0;}
   .calcell .cd{font-weight:700;}
   .calcell .cl{font-size:8.5px; letter-spacing:0.03em; margin-top:1px; opacity:0.85;}
   .callegend{display:flex; gap:16px; margin-top:14px; font-size:11px; color:var(--dim);}
   .callegend span{display:flex; align-items:center; gap:5px;}
   .callegend .dot{width:9px; height:9px; border-radius:3px;}
+
+  /* streak header */
+  .streakcard{
+    background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .streaknum{font-size:56px; font-weight:800; line-height:1;}
+  .streaklabel{font-size:14px; color:var(--dim); margin-top:4px;}
+  .streakflame{font-size:64px; line-height:1; filter:drop-shadow(0 0 10px rgba(232,163,61,0.35));}
+
+  .weekstrip{display:flex; justify-content:space-between; margin-bottom:14px;}
+  .wscol{display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .wslabel{font-size:11px; color:var(--dim2); text-transform:uppercase;}
+  .wscell{
+    width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:15px; background:var(--card); border:1px solid var(--line); color:var(--dim2); cursor:pointer;
+  }
+  .wscell.done{background:var(--text); color:var(--bg); border-color:var(--text);}
+  .wscell.rest{background:var(--card); color:#4fa3e0; border-color:#2f5f80;}
+  .wscell.todaymark{border:2px dashed var(--dim); background:transparent;}
+  .wscell.future{opacity:0.4; cursor:default;}
+
+  .streakstats{display:flex; gap:10px; margin-bottom:16px;}
+  .streakstat{
+    flex:1; background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;
+  }
+  .streakstat .ic{font-size:16px;}
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand">RUTINA<span class="tick">.LOG</span></div>
+  <div class="brand">Lalobito<span class="tick"> Gym</span></div>
   <div class="weekrow">
     <span>Semana en curso</span>
     <span class="count" id="weekCount">— <span class="mono">0/4</span> días</span>
@@ -232,50 +267,50 @@ const DAYS = [
   { id:'d1', name:'Día 1', sub:'Torso — Empuje / Jalón',
     muscles:[{n:'Pecho',p:30},{n:'Espalda',p:30},{n:'Hombro',p:20},{n:'Bíceps',p:10},{n:'Tríceps',p:10}],
     ex:[
-      {id:'d1e1', name:'Press inclinado con mancuerna', sets:3, target:8, unit:'reps', rest:60},
-      {id:'d1e2', name:'Dominadas abiertas en máquina', sets:3, target:8, unit:'reps', rest:60},
-      {id:'d1e3', name:'Press horizontal con barra', sets:3, target:10, unit:'reps', rest:60},
+      {id:'d1e1', name:'Press inclinado con mancuerna', sets:3, target:8, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-incline-bench-press'},
+      {id:'d1e2', name:'Dominadas abiertas en máquina', sets:3, target:8, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-assisted-pull-up'},
+      {id:'d1e3', name:'Press horizontal con barra', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/barbell-bench-press'},
       {id:'d1e4', name:'Remo en barra T (agarre abierto)', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d1e5', name:'Press de hombro con mancuerna', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d1e6', name:'Fondos en 2 bancos', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d1e7', name:'Elevación lateral con mancuerna', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d1e8', name:'Curl con barra Z', sets:3, target:10, unit:'reps', rest:60},
+      {id:'d1e5', name:'Press de hombro con mancuerna', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-seated-overhead-press'},
+      {id:'d1e6', name:'Fondos en 2 bancos', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/bodyweight/male/triceps/bench-dips/'},
+      {id:'d1e7', name:'Elevación lateral con mancuerna', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-lateral-raise'},
+      {id:'d1e8', name:'Curl con barra Z', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/ez-bar-curl'},
     ]},
   { id:'d2', name:'Día 2', sub:'Pierna — Cuádriceps / Femoral',
     muscles:[{n:'Cuádriceps',p:28},{n:'Femoral',p:22},{n:'Glúteo',p:20},{n:'Pantorrilla',p:20},{n:'Abductores',p:10}],
     ex:[
       {id:'d2e1', name:'Sentadilla isométrica en pared', sets:3, target:30, unit:'seg', rest:60},
-      {id:'d2e2', name:'Sentadilla Smith', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d2e3', name:'Pantorrilla en Smith', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d2e4', name:'Extensión de cuádriceps en máquina', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d2e5', name:'Pantorrilla de pie con mancuerna', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d2e6', name:'Femoral sentado en máquina', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d2e7', name:'Puente de glúteo con mancuerna', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d2e8', name:'Abducción de cadera en máquina', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d2e9', name:'Peso muerto con mancuerna', sets:3, target:12, unit:'reps', rest:60},
+      {id:'d2e2', name:'Sentadilla Smith', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/smith-machine-squat'},
+      {id:'d2e3', name:'Pantorrilla en Smith', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/smith-machine-calf-raise'},
+      {id:'d2e4', name:'Extensión de cuádriceps en máquina', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-leg-extension'},
+      {id:'d2e5', name:'Pantorrilla de pie con mancuerna', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-calf-raise'},
+      {id:'d2e6', name:'Femoral sentado en máquina', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/seated-leg-curl'},
+      {id:'d2e7', name:'Puente de glúteo con mancuerna', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-glute-bridge'},
+      {id:'d2e8', name:'Abducción de cadera en máquina', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-hip-abduction'},
+      {id:'d2e9', name:'Peso muerto con mancuerna', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-romanian-deadlift'},
     ]},
   { id:'d3', name:'Día 3', sub:'Torso — Volumen',
     muscles:[{n:'Espalda',p:30},{n:'Pecho',p:25},{n:'Bíceps',p:15},{n:'Tríceps',p:15},{n:'Hombro',p:15}],
     ex:[
-      {id:'d3e1', name:'Press horizontal con mancuerna', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d3e2', name:'Jalón cerrado al frente', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d3e3', name:'Cruce de poleas (crossover)', sets:3, target:15, unit:'reps', rest:60},
-      {id:'d3e4', name:'Pullover en polea', sets:3, target:15, unit:'reps', rest:60},
-      {id:'d3e5', name:'Remo al pecho con barra', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d3e6', name:'Curl copa a 2 manos', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d3e7', name:'Curl predicador', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d3e8', name:'Vuelo agachado con mancuerna', sets:3, target:12, unit:'reps', rest:60},
+      {id:'d3e1', name:'Press horizontal con mancuerna', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-bench-press'},
+      {id:'d3e2', name:'Jalón cerrado al frente', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/neutral-pulldown'},
+      {id:'d3e3', name:'Cruce de poleas (crossover)', sets:3, target:15, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/cable-pec-fly'},
+      {id:'d3e4', name:'Pullover en polea', sets:3, target:15, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/cable-rope-pullover'},
+      {id:'d3e5', name:'Remo al pecho con barra', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/barbell-bent-over-row'},
+      {id:'d3e6', name:'Curl copa a 2 manos', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-curl'},
+      {id:'d3e7', name:'Curl predicador', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/ez-bar-preacher-curl'},
+      {id:'d3e8', name:'Vuelo agachado con mancuerna', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-rear-delt-fly'},
     ]},
   { id:'d4', name:'Día 4', sub:'Pierna — Glúteo / Femoral',
     muscles:[{n:'Cuádriceps',p:30},{n:'Femoral',p:25},{n:'Glúteo',p:25},{n:'Pantorrilla',p:20}],
     ex:[
       {id:'d4e1', name:'Sentadilla isométrica en pared', sets:3, target:30, unit:'seg', rest:60},
-      {id:'d4e2', name:'Prensa 45°', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d4e3', name:'Pantorrilla en prensa', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d4e4', name:'Sentadilla goblet', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d4e5', name:'Pantorrilla a 1 pie con mancuerna', sets:3, target:10, unit:'reps', rest:60},
-      {id:'d4e6', name:'Femoral acostado', sets:3, target:12, unit:'reps', rest:60},
-      {id:'d4e7', name:'Patada de glúteo en máquina', sets:3, target:12, unit:'reps', rest:60},
+      {id:'d4e2', name:'Prensa 45°', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-leg-press'},
+      {id:'d4e3', name:'Pantorrilla en prensa', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-horizontal-leg-press-calf-raise'},
+      {id:'d4e4', name:'Sentadilla goblet', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-goblet-squat'},
+      {id:'d4e5', name:'Pantorrilla a 1 pie con mancuerna', sets:3, target:10, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/dumbbell-single-leg-calf-raise'},
+      {id:'d4e6', name:'Femoral acostado', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-hamstring-curl'},
+      {id:'d4e7', name:'Patada de glúteo en máquina', sets:3, target:12, unit:'reps', rest:60, wiki:'https://musclewiki.com/exercise/machine-glute-kickback'},
     ]},
 ];
 
@@ -522,12 +557,87 @@ function finishDay(day, complete){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
+function getRestDays(){
+  try{ return JSON.parse(localStorage.getItem('restDays') || '[]'); }catch(e){ return []; }
+}
+function toggleRestDay(dateStr){
+  let rest = getRestDays();
+  const idx = rest.indexOf(dateStr);
+  if(idx >= 0) rest.splice(idx,1); else rest.push(dateStr);
+  try{ localStorage.setItem('restDays', JSON.stringify(rest)); }catch(e){}
+}
+function getActiveDateSet(log, restDays){
+  const s = new Set();
+  log.forEach(e => s.add(e.date));
+  restDays.forEach(d => s.add(d));
+  return s;
+}
+function computeCurrentStreak(activeSet){
+  let count = 0;
+  let cursor = new Date();
+  const todayStr = todayISO();
+  if(!activeSet.has(todayStr)) cursor.setDate(cursor.getDate()-1);
+  while(true){
+    const ds = cursor.toISOString().slice(0,10);
+    if(activeSet.has(ds)){ count++; cursor.setDate(cursor.getDate()-1); }
+    else break;
+  }
+  return count;
+}
+function computeBestStreak(activeSet){
+  const dates = Array.from(activeSet).sort();
+  let best = 0, run = 0, prev = null;
+  for(const ds of dates){
+    const d = new Date(ds+'T00:00:00');
+    if(prev !== null){
+      const diffDays = Math.round((d - prev) / 86400000);
+      run = diffDays === 1 ? run+1 : 1;
+    } else { run = 1; }
+    if(run > best) best = run;
+    prev = d;
+  }
+  return best;
+}
+
+function getMonday(d){
+  const nd = new Date(d);
+  const day = nd.getDay();
+  const diff = day === 0 ? -6 : 1-day;
+  nd.setDate(nd.getDate()+diff);
+  nd.setHours(0,0,0,0);
+  return nd;
+}
+
 let calCursor = new Date();
 function renderCalendar(app){
   let log = [];
   try{ log = JSON.parse(localStorage.getItem('sessionLog') || '[]'); }catch(e){ log = []; }
   const byDate = {};
   log.forEach(e => byDate[e.date] = e);
+  const restDays = getRestDays();
+  const activeSet = getActiveDateSet(log, restDays);
+  const currentStreak = computeCurrentStreak(activeSet);
+  const bestStreak = computeBestStreak(activeSet);
+  const todayStr0 = todayISO();
+
+  const monday = getMonday(new Date());
+  const dayLabels = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  let weekCells = '';
+  for(let i=0;i<7;i++){
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    const ds = d.toISOString().slice(0,10);
+    const isFuture = ds > todayStr0;
+    const isToday = ds === todayStr0;
+    const trained = !!byDate[ds];
+    const isRest = restDays.includes(ds);
+    let cls = 'wscell';
+    let icon = '🏋️';
+    if(trained){ cls += ' done'; icon = '✓'; }
+    else if(isRest){ cls += ' rest'; icon = '🌙'; }
+    else if(isFuture){ cls += ' future'; }
+    else if(isToday){ cls += ' todaymark'; }
+    weekCells += `<div class="wscol"><div class="wslabel">${dayLabels[i]}</div><div class="${cls}" data-date="${ds}" data-future="${isFuture}" data-trained="${trained}">${icon}</div></div>`;
+  }
 
   const year = calCursor.getFullYear(), month = calCursor.getMonth();
   const first = new Date(year, month, 1);
@@ -547,6 +657,9 @@ function renderCalendar(app){
     if(entry){
       cls += entry.complete ? ' done' : ' done partial';
       label = entry.dayId.toUpperCase().replace('D','D');
+    } else if(restDays.includes(dateStr)){
+      cls += ' rest';
+      label = '🌙';
     }
     cells += `<div class="${cls}"><div class="cd">${d}</div>${label?`<div class="cl">${label}</div>`:''}</div>`;
   }
@@ -554,6 +667,18 @@ function renderCalendar(app){
   const monthCount = log.filter(e => e.date.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length;
 
   app.innerHTML = `
+    <div class="streakcard">
+      <div>
+        <div class="streaknum">${currentStreak}</div>
+        <div class="streaklabel">día${currentStreak===1?'':'s'} de racha</div>
+      </div>
+      <div class="streakflame">🔥</div>
+    </div>
+    <div class="weekstrip">${weekCells}</div>
+    <div class="streakstats">
+      <div class="streakstat"><span class="ic">🌙</span> <span class="mono">${restDays.length}</span> Días descansados</div>
+      <div class="streakstat"><span class="ic">🔥</span> <span class="mono">${bestStreak}</span> Mejor racha</div>
+    </div>
     <div class="calhead">
       <button class="calnav" id="calPrev">‹</button>
       <div class="calmonth">${monthName}</div>
@@ -570,8 +695,16 @@ function renderCalendar(app){
     <div class="callegend">
       <span><span class="dot" style="background:var(--accent-dark)"></span>Rutina completa</span>
       <span><span class="dot" style="background:var(--card); border:1px solid var(--pr)"></span>Parcial</span>
+      <span><span class="dot" style="background:var(--card); border:1px solid #2f5f80"></span>Descanso</span>
     </div>
   `;
+  app.querySelectorAll('.wscell').forEach(cell=>{
+    if(cell.dataset.future === 'true' || cell.dataset.trained === 'true') return;
+    cell.addEventListener('click', ()=>{
+      toggleRestDay(cell.dataset.date);
+      renderCalendar(app);
+    });
+  });
   document.getElementById('calPrev').addEventListener('click', ()=>{
     calCursor = new Date(year, month-1, 1);
     renderCalendar(app);
@@ -627,6 +760,7 @@ async function renderExercise(ex){
       <span class="prevlast">${prev ? 'Última vez: '+fmtDate(prev.date) : 'Sin historial aún'}</span>
       <button class="addset" data-exid="${ex.id}">+ Añadir serie</button>
     </div>
+    ${ex.wiki ? `<div style="padding:0 14px 14px;"><a class="wikilink" href="${ex.wiki}" target="_blank" rel="noopener">▶ Ver ejecución (MuscleWiki)</a></div>` : ''}
   `;
 
   wrap.querySelectorAll('input.numin').forEach(inp=>{

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Lalobito Gym</title>
+<title>Gym</title>
 <style>
   :root{
     --bg:#111311;
@@ -301,7 +301,7 @@
 <body>
 
 <header class="topbar">
-  <div class="brand">Lalobito<span class="tick"> Gym</span></div>
+  <div class="brand">Gym</div>
   <div class="weekrow">
     <span>Semana en curso</span>
     <span class="count" id="weekCount">— <span class="mono">0/4</span> días</span>
@@ -613,12 +613,25 @@ function logSession(date, dayId, complete){
   try{ localStorage.setItem('sessionLog', JSON.stringify(log)); }catch(e){ console.error(e); }
 }
 
-function finishDay(day, complete){
+async function clearDoneFlagsForDay(day){
+  const today = todayISO();
+  for(const ex of day.ex){
+    const hist = await getHist(ex.id);
+    const entry = hist.find(h => h.date === today);
+    if(entry && entry.sets.some(s => s.done)){
+      entry.sets.forEach(s => { s.done = false; });
+      await setHist(ex.id, hist);
+    }
+  }
+}
+
+async function finishDay(day, complete){
   if(!complete){
     const ok = confirm('Aún te faltan series por marcar como completadas. ¿Quieres guardar y pasar al siguiente día de todas formas?');
     if(!ok) return;
   }
   logSession(todayISO(), day.id, complete);
+  await clearDoneFlagsForDay(day);
   showToast('Rutina guardada ✓');
   state.dayIdx = (state.dayIdx + 1) % DAYS.length;
   renderTabs();

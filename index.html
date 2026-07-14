@@ -107,9 +107,9 @@
   input.numin::placeholder{color:var(--dim2); font-size:12px;}
   input.numin:focus{outline:none; border-color:var(--accent);}
   .checkbtn{
-    width:40px; height:40px; border-radius:50%; border:1px solid var(--line);
+    width:48px; height:48px; border-radius:50%; border:1px solid var(--line);
     background:var(--bg-elev); color:var(--dim2); display:flex; align-items:center;
-    justify-content:center; cursor:pointer; font-size:19px;
+    justify-content:center; cursor:pointer; font-size:22px;
   }
   .checkbtn.done{background:var(--accent); border-color:var(--accent); color:#08201b;}
   .pr-tag{
@@ -396,6 +396,27 @@ async function addSetRow(exId){
   const next = current + 1;
   setCountCache[exId] = next;
   try{ localStorage.setItem('setcount_'+exId, String(next)); }catch(e){}
+
+  const hist = await getHist(exId);
+  const today = todayISO();
+  let entry = hist.find(h => h.date === today);
+  let lastKg = null, lastReps = null;
+  if(entry && entry.sets.length > 0){
+    const lastSet = entry.sets[entry.sets.length-1];
+    lastKg = lastSet.kg; lastReps = lastSet.reps;
+  } else {
+    const prevSession = lastSessionBefore(hist, today);
+    if(prevSession && prevSession.sets.length > 0){
+      const lastSet = prevSession.sets[prevSession.sets.length-1];
+      lastKg = lastSet.kg; lastReps = lastSet.reps;
+    }
+  }
+  if(lastKg != null || lastReps != null){
+    if(!entry){ entry = {date:today, sets:[]}; hist.push(entry); }
+    while(entry.sets.length < next) entry.sets.push({kg:null, reps:null});
+    entry.sets[next-1] = {kg:lastKg, reps:lastReps};
+    await setHist(exId, hist);
+  }
   renderMain();
 }
 
@@ -1078,7 +1099,7 @@ async function renderExercise(ex){
         <div class="exname">${ex.name}${best>0?`<span class="pr-tag mono">PR ${best}kg</span>`:''}</div>
         <div class="extarget">${setCount} × ${ex.target}${ex.unit==='seg'?' seg':''}</div>
       </div>
-      <button class="timerbtn" data-rest="${ex.rest}">⏱ ${ex.rest}s</button>
+      <button class="timerbtn" data-exid="${ex.id}" data-rest="${ex.rest}">⏱ ${ex.rest}s</button>
     </div>
     <table class="sets">
       <tr><th></th><th>Kg</th><th>${unitLabel}</th><th></th></tr>
@@ -1115,25 +1136,40 @@ async function renderExercise(ex){
 }
 
 function startTimer(exId, seconds, btn){
-  if(state.timers[exId]){ clearInterval(state.timers[exId].handle); btn.classList.remove('running'); delete state.timers[exId]; btn.textContent = `⏱ ${seconds}s`; return; }
+  if(state.timers[exId]){
+    clearInterval(state.timers[exId].handle);
+    delete state.timers[exId];
+    btn.classList.remove('running'); btn.textContent = `⏱ ${seconds}s`;
+    return;
+  }
   requestNotifyPermission();
-  let remaining = seconds;
+  const endTime = Date.now() + seconds*1000;
   btn.classList.add('running');
-  btn.textContent = `${remaining}s`;
-  const handle = setInterval(()=>{
-    remaining--;
-    if(remaining <= 0){
-      clearInterval(handle);
-      delete state.timers[exId];
-      btn.classList.remove('running');
-      btn.textContent = `⏱ ${seconds}s`;
-      onTimerDone(exId);
-    } else {
-      btn.textContent = `${remaining}s`;
-    }
-  }, 1000);
-  state.timers[exId] = {handle};
+  btn.textContent = `${seconds}s`;
+  const handle = setInterval(()=> tickTimer(exId), 1000);
+  state.timers[exId] = {handle, endTime, seconds};
 }
+
+function tickTimer(exId){
+  const t = state.timers[exId];
+  if(!t) return;
+  const remaining = Math.round((t.endTime - Date.now())/1000);
+  const btn = document.querySelector(`.timerbtn[data-exid="${exId}"]`);
+  if(remaining <= 0){
+    clearInterval(t.handle);
+    delete state.timers[exId];
+    if(btn){ btn.classList.remove('running'); btn.textContent = `⏱ ${t.seconds}s`; }
+    onTimerDone(exId);
+  } else if(btn){
+    btn.textContent = `${remaining}s`;
+  }
+}
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){
+    Object.keys(state.timers).forEach(exId => tickTimer(exId));
+  }
+});
 
 function requestNotifyPermission(){
   if('Notification' in window && Notification.permission === 'default'){

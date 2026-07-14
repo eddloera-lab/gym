@@ -118,6 +118,7 @@
   }
   .exfoot{padding:0 14px 12px; display:flex; justify-content:space-between; align-items:center;}
   .addset{background:none; border:none; color:var(--accent); font-size:12.5px; font-weight:700; cursor:pointer; padding:4px 0;}
+  .delset{background:none; border:none; color:var(--danger); font-size:12.5px; font-weight:700; cursor:pointer; padding:4px 0; margin-right:14px;}
   .prevlast{font-size:11px; color:var(--dim2);}
   .wikilink{
     display:inline-flex; align-items:center; gap:4px; color:var(--dim); font-size:11.5px;
@@ -391,7 +392,7 @@ async function getSetCount(ex){
   }catch(e){ setCountCache[ex.id] = ex.sets; }
   return setCountCache[ex.id];
 }
-async function addSetRow(exId){
+async function addSetRow(exId, rest){
   const current = setCountCache[exId] || 3;
   const next = current + 1;
   setCountCache[exId] = next;
@@ -415,6 +416,29 @@ async function addSetRow(exId){
     if(!entry){ entry = {date:today, sets:[]}; hist.push(entry); }
     while(entry.sets.length < next) entry.sets.push({kg:null, reps:null});
     entry.sets[next-1] = {kg:lastKg, reps:lastReps};
+    await setHist(exId, hist);
+  }
+  renderMain();
+  if(rest){
+    setTimeout(()=>{
+      const btn = document.querySelector(`.timerbtn[data-exid="${exId}"]`);
+      if(btn && !btn.classList.contains('running')) startTimer(exId, rest, btn);
+    }, 50);
+  }
+}
+
+async function removeSetRow(exId){
+  const current = setCountCache[exId] || 3;
+  if(current <= 1) return;
+  const next = current - 1;
+  setCountCache[exId] = next;
+  try{ localStorage.setItem('setcount_'+exId, String(next)); }catch(e){}
+
+  const hist = await getHist(exId);
+  const today = todayISO();
+  const entry = hist.find(h => h.date === today);
+  if(entry && entry.sets.length > next){
+    entry.sets = entry.sets.slice(0, next);
     await setHist(exId, hist);
   }
   renderMain();
@@ -1107,7 +1131,10 @@ async function renderExercise(ex){
     </table>
     <div class="exfoot">
       <span class="prevlast">${prev ? 'Última vez: '+fmtDate(prev.date) : 'Sin historial aún'}</span>
-      <button class="addset" data-exid="${ex.id}">+ Añadir serie</button>
+      <div>
+        ${setCount > 1 ? `<button class="delset" data-exid="${ex.id}">– Eliminar serie</button>` : ''}
+        <button class="addset" data-exid="${ex.id}">+ Añadir serie</button>
+      </div>
     </div>
     ${ex.wiki ? `<div style="padding:0 14px 14px;"><a class="wikilink" href="${ex.wiki}" target="_blank" rel="noopener">▶ Ver ejecución (MuscleWiki)</a></div>` : ''}
   `;
@@ -1130,7 +1157,9 @@ async function renderExercise(ex){
     }));
   });
   wrap.querySelector('.timerbtn').addEventListener('click', e=> startTimer(ex.id, ex.rest, e.target));
-  wrap.querySelector('.addset').addEventListener('click', e=> addSetRow(e.target.dataset.exid));
+  wrap.querySelector('.addset').addEventListener('click', e=> addSetRow(e.target.dataset.exid, ex.rest));
+  const delBtn = wrap.querySelector('.delset');
+  if(delBtn) delBtn.addEventListener('click', e=> removeSetRow(e.target.dataset.exid));
 
   return wrap;
 }
@@ -1150,7 +1179,7 @@ function startTimer(exId, seconds, btn){
   state.timers[exId] = {handle, endTime, seconds};
 }
 
-function tickTimer(exId){
+function tickTimer(exId, backgrounded){
   const t = state.timers[exId];
   if(!t) return;
   const remaining = Math.round((t.endTime - Date.now())/1000);
@@ -1159,7 +1188,7 @@ function tickTimer(exId){
     clearInterval(t.handle);
     delete state.timers[exId];
     if(btn){ btn.classList.remove('running'); btn.textContent = `⏱ ${t.seconds}s`; }
-    onTimerDone(exId);
+    onTimerDone(exId, !!backgrounded);
   } else if(btn){
     btn.textContent = `${remaining}s`;
   }
@@ -1167,7 +1196,8 @@ function tickTimer(exId){
 
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible'){
-    Object.keys(state.timers).forEach(exId => tickTimer(exId));
+    Object.keys(state.timers).forEach(exId => tickTimer(exId, true));
+    requestWakeLock();
   }
 });
 
@@ -1195,13 +1225,10 @@ async function requestWakeLock(){
     }
   }catch(e){ /* not supported or denied, silently ignore */ }
 }
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible') requestWakeLock();
-});
 document.addEventListener('click', requestWakeLock, {once:true});
 document.addEventListener('touchstart', requestWakeLock, {once:true});
 
-function onTimerDone(exId){
+function onTimerDone(exId, backgrounded){
   if(navigator.vibrate) navigator.vibrate([250,100,250,100,250]);
   beep(); setTimeout(beep, 350); setTimeout(beep, 700);
   document.body.classList.remove('flash');
@@ -1209,19 +1236,21 @@ function onTimerDone(exId){
   document.body.classList.add('flash');
   showToast('¡Descanso terminado!');
   const ex = ALL_EX.find(e=>e.id===exId);
-  showRestOverlay(ex ? ex.name : 'Siguiente serie');
+  showRestOverlay(ex ? ex.name : 'Siguiente serie', backgrounded);
   if('Notification' in window && Notification.permission === 'granted' && document.hidden){
     try{ new Notification('Descanso terminado', { body: ex ? ex.name : 'Siguiente serie', tag:'rest-timer' }); }catch(e){}
   }
 }
 
 let restOverlayTimeout = null;
-function showRestOverlay(exName){
+function showRestOverlay(exName, persist){
   const ov = document.getElementById('restOverlay');
   document.getElementById('roSub').textContent = exName;
   ov.classList.add('show');
   clearTimeout(restOverlayTimeout);
-  restOverlayTimeout = setTimeout(()=> ov.classList.remove('show'), 4000);
+  if(!persist){
+    restOverlayTimeout = setTimeout(()=> ov.classList.remove('show'), 4000);
+  }
 }
 document.getElementById('roClose').addEventListener('click', ()=>{
   document.getElementById('restOverlay').classList.remove('show');

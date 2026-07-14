@@ -606,14 +606,13 @@ async function renderLiveBar(day){
   const kgVal = live.kg ?? '--';
   const repsVal = live.reps ?? live.ex.target;
   const subText = live.ex.unit === 'seg' ? `${repsVal} seg` : `${kgVal} kg × ${repsVal}`;
-  const wstart = getWorkoutStart(day.id);
 
   const bar = document.createElement('div');
   bar.className = 'livebar';
   bar.innerHTML = `
     <div class="lb-top">
       <span class="lb-live">● Entrenando</span>
-      <span>Ejercicio ${live.exIndex+1}/${day.ex.length} · <span id="lbElapsed">${formatElapsed(wstart)}</span></span>
+      <span>Ejercicio ${live.exIndex+1}/${day.ex.length}</span>
     </div>
     <div class="lb-main">
       <div class="lb-info">
@@ -625,12 +624,6 @@ async function renderLiveBar(day){
   `;
   document.body.appendChild(bar);
   document.getElementById('lbCheckBtn').addEventListener('click', ()=> markSetDoneDirect(live.ex.id, live.setIndex));
-  if(wstart){
-    liveTicker = setInterval(()=>{
-      const el = document.getElementById('lbElapsed');
-      if(el) el.textContent = formatElapsed(wstart);
-    }, 1000);
-  }
 }
 
 function lastSessionBefore(hist, excludeToday){

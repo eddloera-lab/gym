@@ -23,7 +23,7 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     -webkit-font-smoothing:antialiased;}
-  body{padding-bottom:110px;}
+  body{padding-bottom:180px;}
   .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;}
 
   header.topbar{
@@ -96,6 +96,7 @@
     letter-spacing:0.05em; text-transform:uppercase; padding:2px 4px 6px;
   }
   table.sets td{padding:4px; vertical-align:middle;}
+  .previa{font-size:12px; color:var(--dim2); text-align:center;}
   .serie-badge{
     width:22px; height:22px; border-radius:6px; background:var(--bg-elev); color:var(--dim);
     display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;
@@ -126,6 +127,11 @@
     margin-top:8px;
   }
   .wikilink:active{background:var(--bg-elev);}
+  .timeraddbtn{
+    display:none; margin-left:6px; border:1px solid var(--line); background:var(--bg-elev);
+    color:var(--accent); border-radius:10px; padding:7px 9px; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  .timerbtn.running + .timeraddbtn{display:inline-block;}
 
   /* progress view */
   .exselect{
@@ -160,6 +166,22 @@
     padding:12px 18px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap;
   }
   .finishbtn.incomplete{background:var(--card); color:var(--dim); border:1px solid var(--line);}
+
+  .livebar{
+    position:fixed; left:0; right:0; bottom:76px; z-index:29;
+    background:var(--card); border-top:1px solid var(--line);
+    padding:9px 16px;
+  }
+  .lb-top{display:flex; justify-content:space-between; font-size:10.5px; color:var(--dim2); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;}
+  .lb-top .lb-live{color:var(--accent); font-weight:800;}
+  .lb-main{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .lb-info{min-width:0;}
+  .lb-name{font-size:14.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .lb-sub{font-size:12px; color:var(--dim); margin-top:2px;}
+  .lb-check{
+    flex-shrink:0; width:38px; height:38px; border-radius:50%; border:none;
+    background:var(--accent); color:#08201b; font-size:18px; cursor:pointer;
+  }
 
   ::selection{background:var(--accent); color:#08201b;}
 
@@ -509,11 +531,105 @@ async function toggleSetDone(exId, setIdx, btn){
   await setHist(exId, hist);
   renderWeekBadge();
   if(done){
+    ensureWorkoutStart(exId.split('e')[0]);
     const card = btn.closest('.exercise');
     const timerBtn = card ? card.querySelector('.timerbtn') : null;
     if(timerBtn && !timerBtn.classList.contains('running')){
       startTimer(exId, 60, timerBtn);
     }
+  }
+}
+
+function getWorkoutStartKey(dayId){ return `wstart_${dayId}_${todayISO()}`; }
+function ensureWorkoutStart(dayId){
+  const k = getWorkoutStartKey(dayId);
+  try{ if(!localStorage.getItem(k)) localStorage.setItem(k, String(Date.now())); }catch(e){}
+}
+function getWorkoutStart(dayId){
+  try{ const v = localStorage.getItem(getWorkoutStartKey(dayId)); return v ? Number(v) : null; }catch(e){ return null; }
+}
+function formatElapsed(startTs){
+  if(!startTs) return '0:00';
+  const diff = Math.max(0, Math.floor((Date.now()-startTs)/1000));
+  const mm = Math.floor(diff/60), ss = diff%60;
+  return `${mm}:${String(ss).padStart(2,'0')}`;
+}
+
+async function markSetDoneDirect(exId, setIdx){
+  const hist = await getHist(exId);
+  const today = todayISO();
+  let entry = hist.find(h => h.date === today);
+  if(!entry){ entry = {date:today, sets:[]}; hist.push(entry); }
+  while(entry.sets.length <= setIdx) entry.sets.push({kg:null, reps:null});
+  entry.sets[setIdx].done = true;
+  await setHist(exId, hist);
+  ensureWorkoutStart(exId.split('e')[0]);
+  renderWeekBadge();
+  await renderMain();
+  const ex = ALL_EX.find(e => e.id === exId);
+  if(ex){
+    setTimeout(()=>{
+      const btn = document.querySelector(`.timerbtn[data-exid="${exId}"]`);
+      if(btn && !btn.classList.contains('running')) startTimer(exId, ex.rest, btn);
+    }, 50);
+  }
+}
+
+async function computeLiveState(day){
+  const today = todayISO();
+  for(let i=0;i<day.ex.length;i++){
+    const ex = day.ex[i];
+    const count = await getSetCount(ex);
+    const hist = await getHist(ex.id);
+    const entry = hist.find(h => h.date === today);
+    for(let s=0;s<count;s++){
+      const doneFlag = entry && entry.sets[s] && entry.sets[s].done;
+      if(!doneFlag){
+        const cur = (entry && entry.sets[s]) || {};
+        return { exIndex:i, ex, setIndex:s, count, kg:cur.kg, reps:cur.reps };
+      }
+    }
+  }
+  return null;
+}
+
+let liveTicker = null;
+function clearLiveTicker(){ if(liveTicker){ clearInterval(liveTicker); liveTicker = null; } }
+
+async function renderLiveBar(day){
+  const old = document.querySelector('.livebar');
+  if(old) old.remove();
+  clearLiveTicker();
+  const live = await computeLiveState(day);
+  if(!live) return;
+
+  const kgVal = live.kg ?? '--';
+  const repsVal = live.reps ?? live.ex.target;
+  const subText = live.ex.unit === 'seg' ? `${repsVal} seg` : `${kgVal} kg × ${repsVal}`;
+  const wstart = getWorkoutStart(day.id);
+
+  const bar = document.createElement('div');
+  bar.className = 'livebar';
+  bar.innerHTML = `
+    <div class="lb-top">
+      <span class="lb-live">● Entrenando</span>
+      <span>Ejercicio ${live.exIndex+1}/${day.ex.length} · <span id="lbElapsed">${formatElapsed(wstart)}</span></span>
+    </div>
+    <div class="lb-main">
+      <div class="lb-info">
+        <div class="lb-name">${live.ex.name}</div>
+        <div class="lb-sub">${subText} · serie ${live.setIndex+1}/${live.count}</div>
+      </div>
+      <button class="lb-check" id="lbCheckBtn">✓</button>
+    </div>
+  `;
+  document.body.appendChild(bar);
+  document.getElementById('lbCheckBtn').addEventListener('click', ()=> markSetDoneDirect(live.ex.id, live.setIndex));
+  if(wstart){
+    liveTicker = setInterval(()=>{
+      const el = document.getElementById('lbElapsed');
+      if(el) el.textContent = formatElapsed(wstart);
+    }, 1000);
   }
 }
 
@@ -577,18 +693,27 @@ async function renderMain(){
   if(state.view === 'progress'){
     const old = document.querySelector('.finishbar');
     if(old) old.remove();
+    const oldLb = document.querySelector('.livebar');
+    if(oldLb) oldLb.remove();
+    clearLiveTicker();
     await renderProgress(app);
     return;
   }
   if(state.view === 'calendar'){
     const old = document.querySelector('.finishbar');
     if(old) old.remove();
+    const oldLb = document.querySelector('.livebar');
+    if(oldLb) oldLb.remove();
+    clearLiveTicker();
     renderCalendar(app);
     return;
   }
   if(state.view === 'weight'){
     const old = document.querySelector('.finishbar');
     if(old) old.remove();
+    const oldLb = document.querySelector('.livebar');
+    if(oldLb) oldLb.remove();
+    clearLiveTicker();
     renderBodyWeight(app);
     return;
   }
@@ -610,6 +735,7 @@ async function renderMain(){
     list.appendChild(await renderExercise(ex));
   }
   await renderFinishBar(day);
+  await renderLiveBar(day);
 }
 
 async function computeDayProgress(day){
@@ -1104,11 +1230,13 @@ async function renderExercise(ex){
   for(let i=0;i<setCount;i++){
     const cur = todayEntry.sets[i] || {};
     const prevSet = prev ? prev.sets[i] : null;
-    const prevText = prevSet ? `${prevSet.kg ?? '-'}kg × ${prevSet.reps ?? '-'}` : `${''}`;
+    const previaText = prevSet && (prevSet.kg!=null || prevSet.reps!=null)
+      ? `${prevSet.kg ?? '-'} x ${prevSet.reps ?? '-'}` : '—';
     const isPR = cur.kg && cur.kg >= best && best > 0 && cur.kg === best;
     rows += `
       <tr>
         <td><div class="serie-badge">${i+1}</div></td>
+        <td><div class="previa">${previaText}</div></td>
         <td><input class="numin" type="number" inputmode="decimal" placeholder="${prevSet && prevSet.kg!=null ? prevSet.kg : '--'}"
              value="${cur.kg ?? ''}" data-ex="${ex.id}" data-set="${i}" data-field="kg"></td>
         <td><input class="numin" type="number" inputmode="numeric" placeholder="${prevSet && prevSet.reps!=null ? prevSet.reps : (ex.target)}"
@@ -1124,9 +1252,10 @@ async function renderExercise(ex){
         <div class="extarget">${setCount} × ${ex.target}${ex.unit==='seg'?' seg':''}</div>
       </div>
       <button class="timerbtn" data-exid="${ex.id}" data-rest="${ex.rest}">⏱ ${ex.rest}s</button>
+      <button class="timeraddbtn" data-exid="${ex.id}">+15s</button>
     </div>
     <table class="sets">
-      <tr><th></th><th>Kg</th><th>${unitLabel}</th><th></th></tr>
+      <tr><th></th><th>Previa</th><th>Kg</th><th>${unitLabel}</th><th></th></tr>
       ${rows}
     </table>
     <div class="exfoot">
@@ -1153,10 +1282,11 @@ async function renderExercise(ex){
   });
   wrap.querySelectorAll('.checkbtn').forEach(btn=>{
     btn.addEventListener('click', ()=> toggleSetDone(btn.dataset.ex, Number(btn.dataset.set), btn).then(()=>{
-      if(state.view === 'day') renderFinishBar(DAYS[state.dayIdx]);
+      if(state.view === 'day'){ renderFinishBar(DAYS[state.dayIdx]); renderLiveBar(DAYS[state.dayIdx]); }
     }));
   });
   wrap.querySelector('.timerbtn').addEventListener('click', e=> startTimer(ex.id, ex.rest, e.target));
+  wrap.querySelector('.timeraddbtn').addEventListener('click', e=> addTimerSeconds(e.target.dataset.exid, 15));
   wrap.querySelector('.addset').addEventListener('click', e=> addSetRow(e.target.dataset.exid, ex.rest));
   const delBtn = wrap.querySelector('.delset');
   if(delBtn) delBtn.addEventListener('click', e=> removeSetRow(e.target.dataset.exid));
@@ -1177,6 +1307,15 @@ function startTimer(exId, seconds, btn){
   btn.textContent = `${seconds}s`;
   const handle = setInterval(()=> tickTimer(exId), 1000);
   state.timers[exId] = {handle, endTime, seconds};
+}
+
+function addTimerSeconds(exId, secs){
+  const t = state.timers[exId];
+  if(!t) return;
+  t.endTime += secs*1000;
+  const remaining = Math.round((t.endTime - Date.now())/1000);
+  const btn = document.querySelector(`.timerbtn[data-exid="${exId}"]`);
+  if(btn) btn.textContent = `${remaining}s`;
 }
 
 function tickTimer(exId, backgrounded){
@@ -1249,7 +1388,7 @@ function showRestOverlay(exName, persist){
   ov.classList.add('show');
   clearTimeout(restOverlayTimeout);
   if(!persist){
-    restOverlayTimeout = setTimeout(()=> ov.classList.remove('show'), 4000);
+    restOverlayTimeout = setTimeout(()=> ov.classList.remove('show'), 6000);
   }
 }
 document.getElementById('roClose').addEventListener('click', ()=>{
